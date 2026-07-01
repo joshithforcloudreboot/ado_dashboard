@@ -49,17 +49,18 @@ async function refresh() {
 
 /* ── Sprint ─────────────────────────────────── */
 function buildSprintPills(sprints) {
-    const container = document.getElementById('sprint-filters');
     const all = ['All', ...sprints];
-    container.innerHTML = all.map(s =>
+    const html = all.map(s =>
         `<div class="sprint-pill ${s === selectedSprint ? 'active' : ''}" onclick="selectSprint('${s}')">${s}</div>`
     ).join('');
+    document.getElementById('sprint-filters').innerHTML = html;
+    document.getElementById('sprint-filters-intern').innerHTML = html;
 }
 
 async function selectSprint(sprint) {
     selectedSprint = sprint;
     document.querySelectorAll('.sprint-pill').forEach(b =>
-        b.classList.toggle('active', b.textContent === sprint));
+        b.classList.toggle('active', b.textContent.trim() === sprint));
     const url = sprint === 'All' ? '/api/getWorkItems' : `/api/getWorkItems?sprint=${encodeURIComponent(sprint)}`;
     try {
         const res = await fetch(url);
