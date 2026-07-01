@@ -183,14 +183,14 @@ Visual dashboard with charts populated from live ADO data; Refresh button update
 ## Phase 5: Performance, Reliability & Security Hardening
 
 ### Goal
-Make the dashboard production-ready with caching, throttling, and proper ADO auth.
+Make the dashboard production-ready with proper ADO auth and optional infrastructure improvements. No caching layer — keeps infrastructure free and simple.
+
+### Caching decision
+No server-side cache. Client-side filtering (implemented in Phase 4) already eliminates per-interaction latency. ADO is only hit on explicit Refresh — acceptable for this use case. Azure Table Storage and Redis both add cost and complexity with minimal benefit given the current usage pattern.
 
 ### Steps
-1. Add **Azure Table Storage** as shared cache — FastAPI writes result to storage on refresh, reads from cache on load
-2. Add **refresh cooldown** — return cached data if refresh called within last 5 minutes
-3. Add **concurrent refresh lock** — prevent duplicate ADO calls if refresh already in progress
-4. Replace PAT with **Azure AD app registration** for ADO auth (more secure, no manual rotation)
-5. Add **custom domain** and SSL via Azure Static Web Apps → Custom Domains
+1. Replace PAT with **Azure AD app registration** for ADO auth (more secure, no manual rotation)
+2. Add **custom domain** and SSL via Azure Static Web Apps → Custom Domains
 
 ---
 
