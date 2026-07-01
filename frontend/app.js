@@ -8,8 +8,14 @@ const STATE_COLORS = {
     Active: '#34D399', New: '#8B93A6', Closed: '#3B9EFF',
     'To Do': '#FBBF24', Done: '#3B9EFF', Resolved: '#3B9EFF',
 };
+const STATUS_MAP = {
+    closed: 'Completed', done: 'Completed', resolved: 'Completed', completed: 'Completed',
+    active: 'In Progress', 'in progress': 'In Progress', committed: 'In Progress',
+    new: 'Pending', 'to do': 'Pending', proposed: 'Pending', ready: 'Pending',
+};
 
-let allData = null;
+let fullItems = [];
+let allSprints = [];
 let selectedSprint = 'All';
 let selectedAssignee = null;
 let selectedStates = new Set();
@@ -28,13 +34,15 @@ async function refresh() {
     try {
         const res = await fetch('/api/getWorkItems');
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        allData = await res.json();
+        const data = await res.json();
 
-        buildSprintPills(allData.sprints);
-        renderSummary(allData);
-        buildAssigneeFilter(allData.work_items);
-        buildStateFilter(allData.work_items);
-        renderIntern(allData.work_items);
+        fullItems = data.work_items;
+        allSprints = data.sprints;
+
+        buildSprintPills(allSprints);
+        buildAssigneeFilter(fullItems);
+        buildStateFilter(fullItems);
+        renderAll();
 
         document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
         dashboard.classList.remove('hidden');
@@ -47,6 +55,57 @@ async function refresh() {
     }
 }
 
+/* ── Client-side compute ────────────────────── */
+function computeSummary(items) {
+    const by_status = { Completed: 0, 'In Progress': 0, Pending: 0, Other: 0 };
+    const by_assignee_map = {};
+
+    items.forEach(i => {
+        const sg = STATUS_MAP[(i.state || '').toLowerCase()] || 'Other';
+        by_status[sg]++;
+        if (!by_assignee_map[i.assignee]) {
+            by_assignee_map[i.assignee] = { Completed: 0, 'In Progress': 0, Pending: 0, Other: 0 };
+        }
+        by_assignee_map[i.assignee][sg]++;
+    });
+
+    const total = items.length;
+    const completed = by_status.Completed;
+    const by_assignee = Object.entries(by_assignee_map)
+        .map(([name, counts]) => ({ name, ...counts }))
+        .sort((a, b) => (b.Completed + b['In Progress'] + b.Pending + b.Other) - (a.Completed + a['In Progress'] + a.Pending + a.Other));
+
+    return {
+        kpis: {
+            total,
+            completed,
+            in_progress: by_status['In Progress'],
+            pending: by_status.Pending,
+            pct_complete: total ? parseFloat((completed / total * 100).toFixed(1)) : 0,
+        },
+        by_status,
+        by_assignee,
+    };
+}
+
+function filteredBySprint(items) {
+    return selectedSprint === 'All' ? items : items.filter(i => i.sprint === selectedSprint);
+}
+
+function filteredByIntern(items) {
+    let f = filteredBySprint(items);
+    if (selectedAssignee) f = f.filter(i => i.assignee === selectedAssignee);
+    if (selectedStates.size) f = f.filter(i => selectedStates.has(i.state));
+    return f;
+}
+
+function renderAll() {
+    const sprintItems = filteredBySprint(fullItems);
+    const summary = computeSummary(sprintItems);
+    renderSummary(summary);
+    renderIntern(filteredByIntern(fullItems));
+}
+
 /* ── Sprint ─────────────────────────────────── */
 function buildSprintPills(sprints) {
     const all = ['All', ...sprints];
@@ -57,31 +116,23 @@ function buildSprintPills(sprints) {
     document.getElementById('sprint-filters-intern').innerHTML = html;
 }
 
-async function selectSprint(sprint) {
+function selectSprint(sprint) {
     selectedSprint = sprint;
     document.querySelectorAll('.sprint-pill').forEach(b =>
         b.classList.toggle('active', b.textContent.trim() === sprint));
-    const url = sprint === 'All' ? '/api/getWorkItems' : `/api/getWorkItems?sprint=${encodeURIComponent(sprint)}`;
-    try {
-        const res = await fetch(url);
-        allData = await res.json();
-        renderSummary(allData);
-        renderIntern(allData.work_items);
-    } catch (e) { console.error(e); }
+    renderAll();
 }
 
 /* ── Summary ────────────────────────────────── */
-function renderSummary(data) {
-    const { kpis, by_status, by_assignee } = data;
-
+function renderSummary({ kpis, by_status, by_assignee }) {
     document.getElementById('kpi-total').textContent = kpis.total;
     document.getElementById('kpi-total-sub').textContent = `across ${selectedSprint === 'All' ? 'all sprints' : selectedSprint}`;
     document.getElementById('kpi-completed').textContent = kpis.completed;
-    document.getElementById('kpi-completed-sub').textContent = kpis.total ? `${Math.round(kpis.completed/kpis.total*100)}% of total` : '';
+    document.getElementById('kpi-completed-sub').textContent = kpis.total ? `${Math.round(kpis.completed / kpis.total * 100)}% of total` : '';
     document.getElementById('kpi-inprogress').textContent = kpis.in_progress;
-    document.getElementById('kpi-inprogress-sub').textContent = kpis.total ? `${Math.round(kpis.in_progress/kpis.total*100)}% of total` : '';
+    document.getElementById('kpi-inprogress-sub').textContent = kpis.total ? `${Math.round(kpis.in_progress / kpis.total * 100)}% of total` : '';
     document.getElementById('kpi-pending').textContent = kpis.pending;
-    document.getElementById('kpi-pending-sub').textContent = kpis.total ? `${Math.round(kpis.pending/kpis.total*100)}% of total` : '';
+    document.getElementById('kpi-pending-sub').textContent = kpis.total ? `${Math.round(kpis.pending / kpis.total * 100)}% of total` : '';
     document.getElementById('kpi-pct').innerHTML = `${kpis.pct_complete}<span style="font-size:24px;color:#7FB4EC;">%</span>`;
     document.getElementById('pct-bar').style.width = kpis.pct_complete + '%';
 
@@ -103,16 +154,12 @@ function renderDonut(by_status, total) {
         return seg;
     });
 
-    const conicParts = segments.map(s =>
-        `${s.color} ${s.start.toFixed(2)}deg ${s.end.toFixed(2)}deg`
-    ).join(', ');
     document.getElementById('donut').style.background =
-        `conic-gradient(from -90deg, ${conicParts})`;
+        `conic-gradient(from -90deg, ${segments.map(s => `${s.color} ${s.start.toFixed(2)}deg ${s.end.toFixed(2)}deg`).join(', ')})`;
 
     document.getElementById('donut-legend').innerHTML = segments.map(s => {
         const pct = total ? Math.round(s.count / total * 100) : 0;
-        const opacity = s.count === 0 ? 'opacity:0.45;' : '';
-        return `<div class="legend-item" style="${opacity}">
+        return `<div class="legend-item" style="${s.count === 0 ? 'opacity:0.45;' : ''}">
             <span class="legend-dot" style="background:${s.color};"></span>
             <span class="legend-name">${s.label}</span>
             <span class="legend-count">${s.count}</span>
@@ -146,7 +193,7 @@ function buildAssigneeFilter(items) {
     const names = [...new Set(items.map(i => i.assignee))].sort();
     document.getElementById('assignee-filter').innerHTML = names.map(n =>
         `<div class="assignee-pill ${selectedAssignee === n ? 'active' : ''}"
-            onclick="selectAssignee(this,'${n.replace(/'/g, "\\'")}')">${n}</div>`
+            onclick="selectAssignee('${n.replace(/'/g, "\\'")}')">${n}</div>`
     ).join('');
 }
 
@@ -154,66 +201,59 @@ function buildStateFilter(items) {
     const states = [...new Set(items.map(i => i.state))].sort();
     document.getElementById('state-filter').innerHTML = states.map(s =>
         `<div class="state-pill ${selectedStates.has(s) ? 'active' : ''}"
-            onclick="toggleState(this,'${s}')">${s}</div>`
+            onclick="toggleState('${s}')">${s}</div>`
     ).join('');
 }
 
-function selectAssignee(el, name) {
+function selectAssignee(name) {
     selectedAssignee = selectedAssignee === name ? null : name;
     document.querySelectorAll('.assignee-pill').forEach(b =>
-        b.classList.toggle('active', b.textContent === selectedAssignee));
-    renderIntern(allData.work_items);
+        b.classList.toggle('active', b.textContent.trim() === selectedAssignee));
+    renderIntern(filteredByIntern(fullItems));
 }
 
-function toggleState(el, state) {
+function toggleState(state) {
     if (selectedStates.has(state)) selectedStates.delete(state);
     else selectedStates.add(state);
-    el.classList.toggle('active', selectedStates.has(state));
-    renderIntern(allData.work_items);
+    document.querySelectorAll('.state-pill').forEach(b =>
+        b.classList.toggle('active', selectedStates.has(b.textContent.trim())));
+    renderIntern(filteredByIntern(fullItems));
 }
 
 /* ── Intern render ───────────────────────────── */
 function renderIntern(items) {
-    let filtered = items;
-    if (selectedAssignee) filtered = filtered.filter(i => i.assignee === selectedAssignee);
-    if (selectedStates.size) filtered = filtered.filter(i => selectedStates.has(i.state));
+    document.getElementById('intern-total').textContent = items.length;
 
-    document.getElementById('intern-total').textContent = filtered.length;
-
-    // Person card
     if (selectedAssignee) {
         const initials = selectedAssignee.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
         document.getElementById('person-avatar').textContent = initials;
         document.getElementById('person-name').textContent = selectedAssignee;
         document.getElementById('person-badge').innerHTML =
-            `<span class="badge-dot"></span>${filtered.length} work item${filtered.length !== 1 ? 's' : ''} assigned`;
+            `<span class="badge-dot"></span>${items.length} work item${items.length !== 1 ? 's' : ''} assigned`;
     } else {
         document.getElementById('person-avatar').textContent = '—';
         document.getElementById('person-name').textContent = 'Select a person';
         document.getElementById('person-badge').innerHTML = '';
     }
 
-    // WI by type bars
     const byType = {};
-    filtered.forEach(i => { byType[i.type] = (byType[i.type] || 0) + 1; });
+    items.forEach(i => { byType[i.type] = (byType[i.type] || 0) + 1; });
     const maxType = Math.max(...Object.values(byType), 1);
     const typeOrder = ['User Story', 'Feature', 'Task', 'Bug', 'Epic'];
     const allTypes = [...new Set([...typeOrder.filter(t => byType[t]), ...Object.keys(byType).filter(t => !typeOrder.includes(t))])];
     document.getElementById('type-bars').innerHTML = allTypes.map(t => {
         const count = byType[t] || 0;
-        const pct = (count / maxType * 100).toFixed(1);
         return `<div class="type-bar-item">
             <div class="type-bar-header">
                 <span class="type-bar-name" style="color:${count ? '#C3CAD8' : '#6B7488'};">${t}</span>
                 <span class="type-bar-count" style="color:${count ? '#EEF2F9' : '#6B7488'};">${count}</span>
             </div>
-            <div class="type-bar-track"><div class="type-bar-fill" style="width:${pct}%;"></div></div>
+            <div class="type-bar-track"><div class="type-bar-fill" style="width:${(count / maxType * 100).toFixed(1)}%;"></div></div>
         </div>`;
     }).join('');
 
-    // WI by state grid
     const byState = {};
-    filtered.forEach(i => { byState[i.state] = (byState[i.state] || 0) + 1; });
+    items.forEach(i => { byState[i.state] = (byState[i.state] || 0) + 1; });
     const stateOrder = ['Active', 'New', 'Closed', 'To Do', 'Done', 'Resolved'];
     const allStates = [...new Set([...stateOrder, ...Object.keys(byState)])].slice(0, 8);
     document.getElementById('state-grid').innerHTML = allStates.map(s => {
@@ -228,8 +268,7 @@ function renderIntern(items) {
         </div>`;
     }).join('');
 
-    // Table
-    document.querySelector('#wi-table tbody').innerHTML = filtered.map(i =>
+    document.querySelector('#wi-table tbody').innerHTML = items.map(i =>
         `<tr>
             <td>${i.title}</td>
             <td>${i.state}</td>
