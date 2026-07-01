@@ -4,113 +4,181 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cloud Reboot AI Tiger Team — Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
+    <div class="app">
+        <!-- HEADER -->
+        <div class="header">
             <div class="header-left">
-                <h1>Cloud Reboot AI Tiger Team &mdash; Project Dashboard</h1>
+                <div class="logo">CR</div>
+                <div>
+                    <div class="org-label">Cloud Reboot AI Tiger Team</div>
+                    <div class="page-title">Project Dashboard</div>
+                </div>
             </div>
             <div class="header-right">
-                <span id="last-updated"></span>
-                <button id="refresh-btn" onclick="refresh()">&#8635; Refresh</button>
+                <div class="last-updated-wrap">
+                    <div class="last-updated-label">Last updated</div>
+                    <div class="last-updated-time" id="last-updated">—</div>
+                </div>
+                <button class="refresh-btn" id="refresh-btn" onclick="refresh()">↻ Refresh</button>
             </div>
-        </header>
+        </div>
 
+        <!-- ERROR -->
         <div id="error-banner" class="error-banner hidden"></div>
-        <div id="loading" class="loading hidden"><div class="spinner"></div><span>Fetching work items...</span></div>
 
+        <!-- LOADING -->
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div><span>Fetching work items…</span>
+        </div>
+
+        <!-- DASHBOARD -->
         <div id="dashboard" class="hidden">
-            <!-- Tabs -->
+            <!-- TABS -->
             <div class="tabs">
-                <button class="tab active" onclick="switchTab('summary')">Summary</button>
-                <button class="tab" onclick="switchTab('intern')">Intern Progress</button>
+                <button class="tab active" id="tab-btn-summary" onclick="switchTab('summary')">Summary</button>
+                <button class="tab" id="tab-btn-intern" onclick="switchTab('intern')">Intern Progress</button>
             </div>
 
-            <!-- Summary Tab -->
-            <div id="tab-summary" class="tab-content">
+            <!-- ===== SUMMARY TAB ===== -->
+            <div id="tab-summary">
                 <!-- Sprint Filter -->
                 <div class="filter-bar">
                     <span class="filter-label">Sprint</span>
-                    <div id="sprint-filters" class="sprint-buttons"></div>
+                    <div id="sprint-filters" class="sprint-pills"></div>
                 </div>
 
                 <!-- KPI Cards -->
                 <div class="kpi-row">
                     <div class="kpi-card">
+                        <div class="kpi-badge" style="background:#9AA6BD;"></div>
+                        <div class="kpi-glow" style="background:radial-gradient(circle,rgba(150,165,190,0.16),transparent 70%);"></div>
+                        <div class="kpi-header"><span class="kpi-dot" style="background:#9AA6BD;"></span><span class="kpi-name">Total Tasks</span></div>
                         <div class="kpi-value" id="kpi-total">—</div>
-                        <div class="kpi-label">Total Tasks</div>
+                        <div class="kpi-sub" id="kpi-total-sub"></div>
                     </div>
                     <div class="kpi-card">
+                        <div class="kpi-glow" style="background:radial-gradient(circle,rgba(59,158,255,0.22),transparent 70%);"></div>
+                        <div class="kpi-header"><span class="kpi-dot" style="background:#3B9EFF;"></span><span class="kpi-name">Completed</span></div>
                         <div class="kpi-value" id="kpi-completed">—</div>
-                        <div class="kpi-label">Completed</div>
+                        <div class="kpi-sub" id="kpi-completed-sub"></div>
                     </div>
                     <div class="kpi-card">
+                        <div class="kpi-glow" style="background:radial-gradient(circle,rgba(52,211,153,0.2),transparent 70%);"></div>
+                        <div class="kpi-header"><span class="kpi-dot" style="background:#34D399;"></span><span class="kpi-name">In Progress</span></div>
                         <div class="kpi-value" id="kpi-inprogress">—</div>
-                        <div class="kpi-label">In Progress</div>
+                        <div class="kpi-sub" id="kpi-inprogress-sub"></div>
                     </div>
                     <div class="kpi-card">
+                        <div class="kpi-glow" style="background:radial-gradient(circle,rgba(251,109,92,0.2),transparent 70%);"></div>
+                        <div class="kpi-header"><span class="kpi-dot" style="background:#FB6D5C;"></span><span class="kpi-name">Pending</span></div>
                         <div class="kpi-value" id="kpi-pending">—</div>
-                        <div class="kpi-label">Pending</div>
+                        <div class="kpi-sub" id="kpi-pending-sub"></div>
                     </div>
-                    <div class="kpi-card">
-                        <div class="kpi-value" id="kpi-pct">—</div>
-                        <div class="kpi-label">% Complete</div>
+                    <div class="kpi-card kpi-card--accent">
+                        <div class="kpi-glow" style="background:radial-gradient(circle,rgba(59,158,255,0.28),transparent 70%);"></div>
+                        <div class="kpi-header"><span class="kpi-dot" style="background:#5AAeff;"></span><span class="kpi-name" style="color:#8FB8E8;">% Complete</span></div>
+                        <div class="kpi-value" id="kpi-pct" style="color:#EAF3FF;">—</div>
+                        <div class="pct-bar-track"><div class="pct-bar-fill" id="pct-bar"></div></div>
                     </div>
                 </div>
 
                 <!-- Charts Row -->
                 <div class="charts-row">
-                    <div class="chart-card">
-                        <h3>Total Tasks by Status Group</h3>
+                    <!-- Donut -->
+                    <div class="card">
+                        <div class="card-title">Tasks by Status Group</div>
+                        <div class="card-sub" id="donut-sub">Distribution across — tasks</div>
                         <div class="donut-wrap">
-                            <canvas id="donut-chart"></canvas>
+                            <div class="donut" id="donut"></div>
+                            <div class="donut-center">
+                                <div class="donut-total" id="donut-total">—</div>
+                                <div class="donut-label">Total tasks</div>
+                            </div>
                         </div>
-                        <div id="donut-legend" class="legend"></div>
+                        <div class="legend" id="donut-legend"></div>
                     </div>
-                    <div class="chart-card wide">
-                        <h3>Total Tasks by Assigned To and Status Group</h3>
-                        <div class="bar-wrap">
-                            <canvas id="bar-chart"></canvas>
+
+                    <!-- Assignee bars -->
+                    <div class="card">
+                        <div class="card-header-row">
+                            <div>
+                                <div class="card-title">Tasks by Assignee</div>
+                                <div class="card-sub">Ranked by total workload · status composition</div>
+                            </div>
+                            <div class="bar-legend">
+                                <div class="bar-legend-item"><span style="background:#3B9EFF;"></span>Completed</div>
+                                <div class="bar-legend-item"><span style="background:#34D399;"></span>In Progress</div>
+                                <div class="bar-legend-item"><span style="background:#FB6D5C;"></span>Pending</div>
+                            </div>
                         </div>
+                        <div class="assignee-bars" id="assignee-bars"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Intern Progress Tab -->
-            <div id="tab-intern" class="tab-content hidden">
+            <!-- ===== INTERN PROGRESS TAB ===== -->
+            <div id="tab-intern" class="hidden">
                 <div class="intern-layout">
+                    <!-- Sidebar -->
                     <div class="intern-sidebar">
                         <div class="card">
-                            <h3>Intern Progress Dashboard</h3>
+                            <div class="card-title">Intern Progress</div>
+                            <div class="card-sub">Filter by person &amp; state</div>
                         </div>
                         <div class="card">
-                            <div class="filter-label">Assigned To</div>
-                            <div id="assignee-filter" class="assignee-grid"></div>
+                            <div class="section-label">Assigned To</div>
+                            <div class="assignee-grid" id="assignee-filter"></div>
                         </div>
                         <div class="card">
-                            <div class="filter-label">State</div>
-                            <div id="state-filter" class="state-buttons"></div>
+                            <div class="section-label">State</div>
+                            <div class="state-pills" id="state-filter"></div>
                         </div>
-                        <div class="card kpi-card-sm">
-                            <div class="kpi-value" id="intern-total">—</div>
-                            <div class="kpi-label">WI Total</div>
+                        <div class="card kpi-card--accent wi-total-card">
+                            <div class="kpi-glow" style="background:radial-gradient(circle,rgba(59,158,255,0.28),transparent 70%);"></div>
+                            <div class="wi-total-value" id="intern-total">—</div>
+                            <div class="wi-total-label">WI Total</div>
                         </div>
                     </div>
+
+                    <!-- Main -->
                     <div class="intern-main">
-                        <div class="chart-card">
-                            <h3>WI Total by Work Item Type</h3>
-                            <canvas id="type-chart"></canvas>
+                        <!-- Person card -->
+                        <div class="card intern-person-card" id="intern-person-card">
+                            <div class="person-avatar" id="person-avatar">—</div>
+                            <div class="person-info">
+                                <div class="person-name" id="person-name">Select a person</div>
+                                <div class="person-sub">Intern · Cloud Reboot AI Tiger Team</div>
+                            </div>
+                            <div class="person-badge" id="person-badge"></div>
                         </div>
-                        <div class="chart-card">
-                            <h3>Work Items</h3>
+
+                        <div class="intern-charts-row">
+                            <!-- WI by Type -->
+                            <div class="card">
+                                <div class="card-title">WI Total by Work Item Type</div>
+                                <div class="card-sub">Breakdown of assigned work</div>
+                                <div class="type-bars" id="type-bars"></div>
+                            </div>
+                            <!-- WI by State -->
+                            <div class="card">
+                                <div class="card-title">WI Total by State</div>
+                                <div class="card-sub">Current status of work items</div>
+                                <div class="state-grid" id="state-grid"></div>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="card">
+                            <div class="card-title">Work Items</div>
                             <div class="table-wrap">
                                 <table id="wi-table">
-                                    <thead>
-                                        <tr><th>Title</th><th>State</th><th>Work Item Type</th></tr>
-                                    </thead>
+                                    <thead><tr><th>Title</th><th>State</th><th>Type</th><th>Sprint</th></tr></thead>
                                     <tbody></tbody>
                                 </table>
                             </div>
