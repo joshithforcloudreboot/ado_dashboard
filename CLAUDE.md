@@ -80,6 +80,87 @@ Set in production via Azure Portal → Static Web App → Configuration → Appl
 - **Donut chart**: CSS `conic-gradient`, computed dynamically
 - **Assignee bars**: CSS flex with proportional widths
 
+## Data Transformation Pipeline
+
+```
+ADO REST API
+│
+│  POST /wit/wiql → all work item IDs (ordered by ChangedDate DESC)
+│  GET  /wit/workitems?ids={batch}&fields=... → raw fields (200/batch)
+│
+▼
+RAW WORK ITEM (per item from ADO)
+{
+  id, rev,
+  fields: {
+    System.Id, System.Title, System.State, System.WorkItemType,
+    System.AssignedTo { displayName, uniqueName, ... },
+    System.IterationPath          → "Cloud Reboot AI Tiger Team\Sprint 2"
+    System.AreaPath, System.CreatedDate, System.ChangedDate,
+    Microsoft.VSTS.Common.Priority, Microsoft.VSTS.Scheduling.StoryPoints
+  }
+}
+│
+│  _transform()  [api/getWorkItems/__init__.py]
+│
+├─ State → Status Group mapping (STATUS_MAP)
+│     "Closed" / "Done" / "Resolved" / "Completed"  →  Completed
+│     "Active" / "In Progress" / "Committed"         →  In Progress
+│     "New"    / "To Do" / "Proposed" / "Ready"      →  Pending
+│     anything else                                   →  Other
+│
+├─ AssignedTo: extract displayName from object, fallback to "(Blank)"
+│
+├─ Sprint: last segment of IterationPath after "\"
+│     "Cloud Reboot AI Tiger Team\Sprint 2"  →  "Sprint 2"
+│
+▼
+TRANSFORMED RESPONSE (JSON to browser)
+{
+  kpis: {
+    total, completed, in_progress, pending,
+    pct_complete  ← round(completed / total * 100, 1)
+  },
+
+  by_status: {
+    Completed: N, "In Progress": N, Pending: N, Other: N
+  },
+
+  by_assignee: [                        ← sorted by total workload desc
+    { name, Completed, "In Progress", Pending, Other },
+    ...
+  ],
+
+  sprints: ["Sprint 1", "Sprint 2", ...],   ← sorted, unique
+
+  work_items: [                         ← flat list, one per item
+    {
+      id, title, state, status_group, type,
+      assignee, sprint, area,
+      priority, story_points,
+      created_date, changed_date
+    },
+    ...
+  ]
+}
+│
+│  Client-side (frontend/app.js)
+│  fullItems[] stored in memory after first fetch
+│
+├─ Sprint filter   → filteredBySprint()  filters work_items by item.sprint
+├─ Assignee filter → filters by item.assignee
+├─ State filter    → filters by item.state (multi-select)
+│
+├─ computeSummary(filteredItems)
+│     re-computes kpis, by_status, by_assignee from filtered set
+│
+├─ renderDonut()       → CSS conic-gradient degrees from by_status counts
+├─ renderAssigneeBars() → CSS flex proportional width from by_assignee
+├─ renderIntern()      → type bars, state grid, work items table
+▼
+DOM updated — no extra API calls
+```
+
 ## Design
 
 Dark theme matching the Cloud Reboot design system:
