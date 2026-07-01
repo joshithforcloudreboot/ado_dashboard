@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+local.settings.json
+api/local.settings.json
+venv/
+.venv/
