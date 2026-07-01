@@ -1,5 +1,14 @@
 # Project Progress
 
+## Session Reference
+
+| Field | Value |
+|---|---|
+| Session ID | `ffad7776-0c81-4ac9-aa2d-a451c2ee0c2f` |
+| Developer | joshithforcloudreboot |
+| Email | joshitha@cloudrebootinc.com |
+| Date | 2026-07-01 |
+
 ## Phase 1 — Project Setup & Automated Deployment ✅
 
 - Created repo structure: `/frontend`, `/api`, `.github/workflows`
