@@ -3,38 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Azure DevOps Dashboard</title>
+    <title>Cloud Reboot AI Tiger Team — Dashboard</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
             <div class="header-left">
-                <h1>Azure DevOps Dashboard</h1>
-                <p class="project-name">Cloud Reboot AI Tiger Team</p>
+                <h1>Cloud Reboot AI Tiger Team &mdash; Project Dashboard</h1>
             </div>
             <div class="header-right">
                 <span id="last-updated"></span>
-                <button id="refresh-btn" onclick="fetchWorkItems()">Refresh</button>
+                <button id="refresh-btn" onclick="refresh()">&#8635; Refresh</button>
             </div>
         </header>
 
         <div id="error-banner" class="error-banner hidden"></div>
+        <div id="loading" class="loading hidden"><div class="spinner"></div><span>Fetching work items...</span></div>
 
-        <div id="loading" class="loading hidden">
-            <div class="spinner"></div>
-            <span>Fetching work items...</span>
-        </div>
-
-        <div id="raw-data" class="raw-data hidden">
-            <div class="raw-header">
-                <span id="item-count"></span>
-                <span class="raw-label">Raw JSON Response</span>
+        <div id="dashboard" class="hidden">
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('summary')">Summary</button>
+                <button class="tab" onclick="switchTab('intern')">Intern Progress</button>
             </div>
-            <pre id="json-output"></pre>
+
+            <!-- Summary Tab -->
+            <div id="tab-summary" class="tab-content">
+                <!-- Sprint Filter -->
+                <div class="filter-bar">
+                    <span class="filter-label">Sprint</span>
+                    <div id="sprint-filters" class="sprint-buttons"></div>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="kpi-row">
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="kpi-total">—</div>
+                        <div class="kpi-label">Total Tasks</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="kpi-completed">—</div>
+                        <div class="kpi-label">Completed</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="kpi-inprogress">—</div>
+                        <div class="kpi-label">In Progress</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="kpi-pending">—</div>
+                        <div class="kpi-label">Pending</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="kpi-pct">—</div>
+                        <div class="kpi-label">% Complete</div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="charts-row">
+                    <div class="chart-card">
+                        <h3>Total Tasks by Status Group</h3>
+                        <div class="donut-wrap">
+                            <canvas id="donut-chart"></canvas>
+                        </div>
+                        <div id="donut-legend" class="legend"></div>
+                    </div>
+                    <div class="chart-card wide">
+                        <h3>Total Tasks by Assigned To and Status Group</h3>
+                        <div class="bar-wrap">
+                            <canvas id="bar-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Intern Progress Tab -->
+            <div id="tab-intern" class="tab-content hidden">
+                <div class="intern-layout">
+                    <div class="intern-sidebar">
+                        <div class="card">
+                            <h3>Intern Progress Dashboard</h3>
+                        </div>
+                        <div class="card">
+                            <div class="filter-label">Assigned To</div>
+                            <div id="assignee-filter" class="assignee-grid"></div>
+                        </div>
+                        <div class="card">
+                            <div class="filter-label">State</div>
+                            <div id="state-filter" class="state-buttons"></div>
+                        </div>
+                        <div class="card kpi-card-sm">
+                            <div class="kpi-value" id="intern-total">—</div>
+                            <div class="kpi-label">WI Total</div>
+                        </div>
+                    </div>
+                    <div class="intern-main">
+                        <div class="chart-card">
+                            <h3>WI Total by Work Item Type</h3>
+                            <canvas id="type-chart"></canvas>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Work Items</h3>
+                            <div class="table-wrap">
+                                <table id="wi-table">
+                                    <thead>
+                                        <tr><th>Title</th><th>State</th><th>Work Item Type</th></tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
     <script src="app.js"></script>
 </body>
 </html>
