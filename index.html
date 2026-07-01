@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure DevOps Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #0078d4;
+            margin-bottom: 10px;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .card p {
+            color: #666;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Azure DevOps Dashboard</h1>
+            <p>Monitor and manage your Azure DevOps projects</p>
+        </header>
+
+        <div class="dashboard">
+            <div class="card">
+                <h2>Projects</h2>
+                <p>View and manage your projects</p>
+            </div>
+
+            <div class="card">
+                <h2>Builds</h2>
+                <p>Monitor build pipelines and status</p>
+            </div>
+
+            <div class="card">
+                <h2>Releases</h2>
+                <p>Track release pipelines and deployments</p>
+            </div>
+
+            <div class="card">
+                <h2>Work Items</h2>
+                <p>Manage user stories, bugs, and tasks</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
