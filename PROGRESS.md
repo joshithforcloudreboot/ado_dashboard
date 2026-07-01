@@ -1,17 +1,21 @@
 # Project Progress
 
-## Session Summary
+---
 
-Built a full Azure DevOps dashboard from scratch — GitHub repo, Azure Static Web Apps CI/CD pipeline, Python Azure Function fetching live ADO work items, and a dark-themed frontend with KPI cards, donut chart, and assignee bars. Implemented two tabs (Summary and Intern Progress) with sprint, assignee, and state slicers, all filtered client-side for instant response. Applied the Cloud Reboot design system (Space Grotesk + IBM Plex Sans, dark theme) imported directly from Claude Design. Token count for this session is not directly accessible from within Claude Code.
+## Sessions
 
-## Session Reference
+### Session 1 — 2026-07-01
 
 | Field | Value |
 |---|---|
 | Session ID | `ffad7776-0c81-4ac9-aa2d-a451c2ee0c2f` |
 | Developer | joshithforcloudreboot |
 | Email | joshitha@cloudrebootinc.com |
-| Date | 2026-07-01 |
+| Phases completed | 1, 2, 3, 4 |
+
+**Summary:** Built a full Azure DevOps dashboard from scratch — GitHub repo, Azure Static Web Apps CI/CD pipeline, Python Azure Function fetching live ADO work items, and a dark-themed frontend with KPI cards, donut chart, and assignee bars. Implemented two tabs (Summary and Intern Progress) with sprint, assignee, and state slicers, all filtered client-side for instant response. Applied the Cloud Reboot design system (Space Grotesk + IBM Plex Sans, dark theme) imported directly from Claude Design. Token count for this session is not directly accessible from within Claude Code.
+
+---
 
 ## Phase 1 — Project Setup & Automated Deployment ✅
 
@@ -61,8 +65,8 @@ Built a full Azure DevOps dashboard from scratch — GitHub repo, Azure Static W
 
 | Phase | Description | Status |
 |---|---|---|
-| 5 | Azure Table Storage cache, refresh cooldown, concurrent lock | Not started |
-| 6 | Azure AD authentication | Not started |
+| 5 | Azure AD app registration for ADO auth + custom domain | Not started |
+| 6 | Azure AD user authentication | Not started |
 
 ## Key Decisions
 
@@ -70,6 +74,7 @@ Built a full Azure DevOps dashboard from scratch — GitHub repo, Azure Static W
 |---|---|
 | Vanilla JS (no framework) | No build step needed, deploys as static files |
 | Client-side filtering | Eliminates per-interaction API latency |
+| No server-side cache | Client-side filtering already handles latency; keeps infra free |
 | CSS conic-gradient for donut | No Chart.js dependency, matches design exactly |
 | WIQL + batch fetch over OData | Simpler auth, works with PAT |
 | Azure Static Web Apps | Auto-generates GitHub Actions CI/CD on repo link |
