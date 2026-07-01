@@ -1,5 +1,9 @@
 # Project Progress
 
+## Session Summary
+
+Built a full Azure DevOps dashboard from scratch — GitHub repo, Azure Static Web Apps CI/CD pipeline, Python Azure Function fetching live ADO work items, and a dark-themed frontend with KPI cards, donut chart, and assignee bars. Implemented two tabs (Summary and Intern Progress) with sprint, assignee, and state slicers, all filtered client-side for instant response. Applied the Cloud Reboot design system (Space Grotesk + IBM Plex Sans, dark theme) imported directly from Claude Design. Token count for this session is not directly accessible from within Claude Code.
+
 ## Session Reference
 
 | Field | Value |
