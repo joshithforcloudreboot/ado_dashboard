@@ -18,6 +18,7 @@
                 <div>
                     <div class="org-label">Cloud Reboot AI Tiger Team</div>
                     <div class="page-title">Project Dashboard</div>
+                    <div class="project-scope-note" id="project-scope-note"></div>
                 </div>
             </div>
             <div class="header-right">
@@ -51,6 +52,21 @@
                 <div class="filter-bar">
                     <span class="filter-label">Sprint</span>
                     <div id="sprint-filters" class="sprint-pills"></div>
+                </div>
+
+                <!-- Epic Filter -->
+                <div class="filter-bar" style="margin-top:12px;">
+                    <span class="filter-label">Epic</span>
+                    <div id="epic-filters" class="sprint-pills"></div>
+                </div>
+
+                <!-- Date Range Filter -->
+                <div class="filter-bar" style="margin-top:12px;">
+                    <span class="filter-label">Created Between</span>
+                    <input type="date" id="date-from" class="date-input" onchange="applyDateRange()">
+                    <span class="date-range-sep">to</span>
+                    <input type="date" id="date-to" class="date-input" onchange="applyDateRange()">
+                    <button class="date-clear-btn" onclick="clearDateRange()">Clear</button>
                 </div>
 
                 <!-- KPI Cards -->
@@ -88,6 +104,38 @@
                     </div>
                 </div>
 
+                <!-- Attention KPI Cards -->
+                <div class="kpi-row kpi-row--attention">
+                    <div class="kpi-card">
+                        <div class="kpi-glow" style="background:radial-gradient(circle,rgba(251,109,92,0.22),transparent 70%);"></div>
+                        <div class="kpi-header"><span class="kpi-dot" style="background:#FB6D5C;"></span><span class="kpi-name">Blocked</span></div>
+                        <div class="kpi-value" id="kpi-blocked">—</div>
+                        <div class="kpi-sub">Waiting on an open Spike</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-glow" style="background:radial-gradient(circle,rgba(245,158,11,0.2),transparent 70%);"></div>
+                        <div class="kpi-header"><span class="kpi-dot" style="background:#F59E0B;"></span><span class="kpi-name">Overdue</span></div>
+                        <div class="kpi-value" id="kpi-overdue">—</div>
+                        <div class="kpi-sub">Past due date, not completed</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-glow" style="background:radial-gradient(circle,rgba(251,191,36,0.2),transparent 70%);"></div>
+                        <div class="kpi-header"><span class="kpi-dot" style="background:#FBBF24;"></span><span class="kpi-name">Unassigned</span></div>
+                        <div class="kpi-value" id="kpi-unassigned">—</div>
+                        <div class="kpi-sub">No owner set</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-glow" style="background:radial-gradient(circle,rgba(154,166,189,0.18),transparent 70%);"></div>
+                        <div class="kpi-header"><span class="kpi-dot" style="background:#9AA6BD;"></span><span class="kpi-name">Stale</span></div>
+                        <div class="kpi-value" id="kpi-stale">—</div>
+                        <div class="kpi-sub" id="kpi-stale-sub">No update in 7+ days</div>
+                    </div>
+                </div>
+                <div class="data-note">
+                    Note: <strong>Overdue</strong> only counts items with a Due Date or Target Date set in Azure DevOps — not every item has one.
+                    <strong>Blocked</strong> means an active "Blocked By" link to an open Spike.
+                </div>
+
                 <!-- Charts Row -->
                 <div class="charts-row">
                     <!-- Donut -->
@@ -120,6 +168,80 @@
                         <div class="assignee-bars" id="assignee-bars"></div>
                     </div>
                 </div>
+
+                <!-- Epic Progress -->
+                <div class="charts-row-2">
+                    <div class="card">
+                        <div class="card-header-row">
+                            <div>
+                                <div class="card-title">Progress by Epic</div>
+                                <div class="card-sub">How much of each Epic is done · click to view its work items</div>
+                            </div>
+                            <div class="bar-legend">
+                                <div class="bar-legend-item"><span style="background:#3B9EFF;"></span>Completed</div>
+                                <div class="bar-legend-item"><span style="background:#34D399;"></span>In Progress</div>
+                                <div class="bar-legend-item"><span style="background:#FB6D5C;"></span>Pending</div>
+                            </div>
+                        </div>
+                        <div class="assignee-bars" id="epic-bars"></div>
+                    </div>
+                </div>
+
+                <!-- Needs Attention -->
+                <div class="charts-row-2">
+                    <div class="card">
+                        <div class="card-header-row">
+                            <div>
+                                <div class="card-title">Needs Attention</div>
+                                <div class="card-sub" id="attention-sub">Blocked, overdue, unassigned, or stale work items</div>
+                            </div>
+                        </div>
+                        <div class="table-wrap" style="margin-top:16px;">
+                            <table id="attention-table">
+                                <thead><tr><th>Task</th><th>Assigned To</th><th>Status</th><th>Last Updated</th><th>Reason for Attention</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Updates -->
+                <div class="charts-row-2">
+                    <div class="card">
+                        <div class="card-header-row">
+                            <div>
+                                <div class="card-title">Recent Activity</div>
+                                <div class="card-sub">What changed in the last 7 days</div>
+                            </div>
+                        </div>
+                        <div class="recent-grid">
+                            <div class="recent-col">
+                                <div class="recent-col-header">
+                                    <span class="recent-dot" style="background:#3B9EFF;"></span>
+                                    <span class="recent-col-title">Completed</span>
+                                    <span class="recent-col-count" id="recent-completed-count">0</span>
+                                </div>
+                                <div class="recent-list" id="recent-completed-list"></div>
+                            </div>
+                            <div class="recent-col">
+                                <div class="recent-col-header">
+                                    <span class="recent-dot" style="background:#34D399;"></span>
+                                    <span class="recent-col-title">Updated</span>
+                                    <span class="recent-col-count" id="recent-updated-count">0</span>
+                                </div>
+                                <div class="recent-list" id="recent-updated-list"></div>
+                            </div>
+                            <div class="recent-col">
+                                <div class="recent-col-header">
+                                    <span class="recent-dot" style="background:#FBBF24;"></span>
+                                    <span class="recent-col-title">Created</span>
+                                    <span class="recent-col-count" id="recent-created-count">0</span>
+                                </div>
+                                <div class="recent-list" id="recent-created-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- ===== INTERN PROGRESS TAB ===== -->
@@ -143,6 +265,10 @@
                         <div class="card">
                             <div class="section-label">State</div>
                             <div class="state-pills" id="state-filter"></div>
+                        </div>
+                        <div class="card">
+                            <div class="section-label">Epic</div>
+                            <div class="sprint-pills" id="epic-filter-intern"></div>
                         </div>
                         <div class="card kpi-card--accent wi-total-card">
                             <div class="kpi-glow" style="background:radial-gradient(circle,rgba(59,158,255,0.28),transparent 70%);"></div>
@@ -183,7 +309,7 @@
                             <div class="card-title">Work Items</div>
                             <div class="table-wrap">
                                 <table id="wi-table">
-                                    <thead><tr><th>Title</th><th>State</th><th>Type</th><th>Sprint</th></tr></thead>
+                                    <thead><tr><th>Title</th><th>State</th><th>Type</th><th>Sprint</th><th>Epic</th></tr></thead>
                                     <tbody></tbody>
                                 </table>
                             </div>
