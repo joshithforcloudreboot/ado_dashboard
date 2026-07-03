@@ -4,15 +4,23 @@ const STATUS_COLORS = {
     Pending: '#FB6D5C',
     Other: '#FBBF24',
 };
-const STATE_COLORS = {
-    Active: '#34D399', New: '#8B93A6', Closed: '#3B9EFF',
-    'To Do': '#FBBF24', Done: '#3B9EFF', Resolved: '#3B9EFF',
-};
 const STATUS_MAP = {
     closed: 'Completed', done: 'Completed', resolved: 'Completed', completed: 'Completed',
     active: 'In Progress', 'in progress': 'In Progress', committed: 'In Progress',
     new: 'Pending', 'to do': 'Pending', proposed: 'Pending', ready: 'Pending',
 };
+
+// Every status tag site-wide (tables, lists) renders through this — one
+// consistent Completed / In Progress / Pending / Other vocabulary and color set.
+function statusGroupOf(item) {
+    return item.status_group || STATUS_MAP[(item.state || '').toLowerCase()] || 'Other';
+}
+
+function statusPillHTML(item) {
+    const group = statusGroupOf(item);
+    const color = STATUS_COLORS[group];
+    return `<span class="status-pill"><span class="status-pill-dot" style="background:${color};"></span>${group}<span class="status-pill-raw">(${item.state})</span></span>`;
+}
 
 let fullItems = [];
 let allSprints = [];
@@ -155,7 +163,7 @@ function clearDateRange() {
 }
 
 function filteredForSummary(items) {
-    return filteredByDateRange(filteredByEpic(filteredBySprint(items)));
+    return filteredByDateRange(filteredByEpic(items));
 }
 
 function filteredByIntern(items) {
@@ -170,7 +178,7 @@ function renderAll() {
     const scoped = filteredForSummary(fullItems);
     const summary = computeSummary(scoped);
     renderSummary(summary);
-    renderEpicBars(computeByEpic(filteredByDateRange(filteredBySprint(fullItems))));
+    renderEpicBars(computeByEpic(filteredByDateRange(fullItems)));
     renderAttentionTable(scoped);
     renderRecentActivity(scoped);
     renderIntern(filteredByIntern(fullItems));
@@ -200,8 +208,11 @@ function renderRecentActivity(items) {
         .sort((a, b) => daysAgo(a.created_date) - daysAgo(b.created_date));
 
     fillRecentCol('completed', completed, i => `Closed ${Math.round(daysAgo(i.closed_date || i.changed_date))}d ago · ${i.assignee}`);
-    fillRecentCol('updated', updated, i => `Updated ${Math.round(daysAgo(i.changed_date))}d ago · ${i.state}`);
+    fillRecentCol('updated', updated, i => `Updated ${Math.round(daysAgo(i.changed_date))}d ago · ${statusGroupOf(i)}`);
     fillRecentCol('created', created, i => `Created ${Math.round(daysAgo(i.created_date))}d ago · ${i.assignee}`);
+
+    document.getElementById('recent-sub').textContent =
+        `${completed.length} completed · ${updated.length} updated · ${created.length} created in the last 7 days`;
 }
 
 function fillRecentCol(key, list, metaFn) {
@@ -219,21 +230,20 @@ function fillRecentCol(key, list, metaFn) {
     ).join('');
 }
 
-/* ── Sprint ─────────────────────────────────── */
+/* ── Sprint (Intern tab only — Summary tab uses Epic instead) ── */
 function buildSprintPills(sprints) {
     const all = ['All', ...sprints];
     const html = all.map(s =>
         `<div class="sprint-pill ${s === selectedSprint ? 'active' : ''}" onclick="selectSprint('${s}')">${s}</div>`
     ).join('');
-    document.getElementById('sprint-filters').innerHTML = html;
     document.getElementById('sprint-filters-intern').innerHTML = html;
 }
 
 function selectSprint(sprint) {
     selectedSprint = sprint;
-    document.querySelectorAll('#sprint-filters .sprint-pill, #sprint-filters-intern .sprint-pill').forEach(b =>
+    document.querySelectorAll('#sprint-filters-intern .sprint-pill').forEach(b =>
         b.classList.toggle('active', b.textContent.trim() === sprint));
-    renderAll();
+    renderIntern(filteredByIntern(fullItems));
 }
 
 /* ── Epic ───────────────────────────────────── */
@@ -274,7 +284,7 @@ function jumpToEpicInIntern(epic) {
 /* ── Summary ────────────────────────────────── */
 function renderSummary({ kpis, by_status, by_assignee }) {
     document.getElementById('kpi-total').textContent = kpis.total;
-    document.getElementById('kpi-total-sub').textContent = `across ${selectedSprint === 'All' ? 'all sprints' : selectedSprint}`;
+    document.getElementById('kpi-total-sub').textContent = `across ${selectedEpic === 'All' ? 'all epics' : selectedEpic}`;
     document.getElementById('kpi-completed').textContent = kpis.completed;
     document.getElementById('kpi-completed-sub').textContent = kpis.total ? `${Math.round(kpis.completed / kpis.total * 100)}% of total` : '';
     document.getElementById('kpi-inprogress').textContent = kpis.in_progress;
@@ -284,13 +294,25 @@ function renderSummary({ kpis, by_status, by_assignee }) {
     document.getElementById('kpi-pct').innerHTML = `${kpis.pct_complete}<span style="font-size:24px;color:#7FB4EC;">%</span>`;
     document.getElementById('pct-bar').style.width = kpis.pct_complete + '%';
 
-    document.getElementById('kpi-blocked').textContent = kpis.blocked;
-    document.getElementById('kpi-overdue').textContent = kpis.overdue;
-    document.getElementById('kpi-unassigned').textContent = kpis.unassigned;
-    document.getElementById('kpi-stale').textContent = kpis.stale;
-
+    renderAttentionChips(kpis);
     renderDonut(by_status, kpis.total);
     renderAssigneeBars(by_assignee);
+}
+
+function renderAttentionChips(kpis) {
+    const chips = [
+        { label: 'Blocked', value: kpis.blocked, color: '#FB6D5C', title: 'Waiting on an open Spike' },
+        { label: 'Overdue', value: kpis.overdue, color: '#F59E0B', title: 'Past Due/Target Date, not completed' },
+        { label: 'Unassigned', value: kpis.unassigned, color: '#FBBF24', title: 'No owner set' },
+        { label: 'Stale', value: kpis.stale, color: '#9AA6BD', title: 'No update in 7+ days' },
+    ];
+    document.getElementById('attention-chips').innerHTML = chips.map(c => `
+        <div class="attention-chip${c.value === 0 ? ' is-zero' : ''}" title="${c.title}">
+            <span class="attention-chip-dot" style="background:${c.color};"></span>
+            <span class="attention-chip-label">${c.label}</span>
+            <span class="attention-chip-value">${c.value}</span>
+        </div>`
+    ).join('');
 }
 
 function renderEpicBars(by_epic) {
@@ -303,7 +325,7 @@ function renderEpicBars(by_epic) {
         const total = e.Completed + e['In Progress'] + e.Pending + e.Other;
         const widthPct = (total / maxTotal * 100).toFixed(1);
         return `<div class="assignee-row" style="cursor:pointer;" onclick="jumpToEpicInIntern('${e.name.replace(/'/g, "\\'")}')">
-            <span class="assignee-name">${e.name}</span>
+            <span class="assignee-name" title="${e.name}">${e.name}</span>
             <div class="assignee-bar-track">
                 <div class="assignee-bar-inner" style="width:${widthPct}%;">
                     <div style="flex:${e.Completed} 1 0;background:#3B9EFF;"></div>
@@ -350,11 +372,25 @@ function renderAttentionTable(items) {
         <tr>
             <td>${i.title}</td>
             <td>${i.assignee}</td>
-            <td>${i.state}</td>
+            <td>${statusPillHTML(i)}</td>
             <td>${formatLastUpdated(i)}</td>
             <td style="color:#FB6D5C;">${i.attention_reasons.join(', ')}</td>
         </tr>`
     ).join('');
+}
+
+function toggleAttentionTable() {
+    const wrap = document.getElementById('attention-table-wrap');
+    const btn = document.getElementById('attention-toggle-btn');
+    const isHidden = wrap.classList.toggle('hidden');
+    btn.textContent = isHidden ? 'Open' : 'Close';
+}
+
+function toggleRecentActivity() {
+    const wrap = document.getElementById('recent-activity-wrap');
+    const btn = document.getElementById('recent-toggle-btn');
+    const isHidden = wrap.classList.toggle('hidden');
+    btn.textContent = isHidden ? 'Open' : 'Close';
 }
 
 function renderDonut(by_status, total) {
@@ -391,7 +427,7 @@ function renderAssigneeBars(by_assignee) {
         const total = a.Completed + a['In Progress'] + a.Pending + a.Other;
         const widthPct = (total / maxTotal * 100).toFixed(1);
         return `<div class="assignee-row">
-            <span class="assignee-name">${a.name}</span>
+            <span class="assignee-name" title="${a.name}">${a.name}</span>
             <div class="assignee-bar-track">
                 <div class="assignee-bar-inner" style="width:${widthPct}%;">
                     <div style="flex:${a.Completed} 1 0;background:#3B9EFF;"></div>
@@ -475,7 +511,7 @@ function renderIntern(items) {
     const allStates = [...new Set([...stateOrder, ...Object.keys(byState)])].slice(0, 8);
     document.getElementById('state-grid').innerHTML = allStates.map(s => {
         const count = byState[s] || 0;
-        const color = STATE_COLORS[s] || '#6B7488';
+        const color = STATUS_COLORS[STATUS_MAP[s.toLowerCase()] || 'Other'];
         return `<div class="state-tile">
             <div class="state-tile-header">
                 <span class="state-tile-dot" style="background:${color};"></span>
@@ -487,11 +523,11 @@ function renderIntern(items) {
 
     document.querySelector('#wi-table tbody').innerHTML = items.map(i =>
         `<tr>
-            <td>${i.title}</td>
-            <td>${i.state}</td>
+            <td class="truncate-cell" title="${i.title}">${i.title}</td>
+            <td>${statusPillHTML(i)}</td>
             <td>${i.type}</td>
             <td>${i.sprint}</td>
-            <td>${i.epic_title || '(No Epic)'}</td>
+            <td class="truncate-cell" title="${i.epic_title || '(No Epic)'}">${i.epic_title || '(No Epic)'}</td>
         </tr>`
     ).join('');
 }
