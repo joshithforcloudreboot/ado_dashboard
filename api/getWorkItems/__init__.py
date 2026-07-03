@@ -21,6 +21,14 @@ def map_status(state: str) -> str:
     return STATUS_MAP.get((state or "").lower(), "Other")
 
 
+def _sprint_label(iteration_path: str) -> str:
+    """Items directly under the project root (no '\\Sprint N' segment) have no
+    real sprint — label them clearly instead of showing the raw project name."""
+    if not iteration_path:
+        return "No Sprint"
+    return iteration_path.split("\\")[-1] if "\\" in iteration_path else "No Sprint"
+
+
 def _parse_dt(value: str):
     """Parse an ADO ISO-8601 timestamp (e.g. '2026-07-01T12:00:00Z') to aware datetime, or None."""
     if not value:
@@ -151,10 +159,10 @@ def _transform(raw_items, sprint_filter):
     epic_cache = {}
 
     sprints = sorted(set(
-        item["fields"].get("System.IterationPath", "").split("\\")[-1]
+        _sprint_label(item["fields"].get("System.IterationPath", ""))
         for item in raw_items
         if item["fields"].get("System.IterationPath")
-    ))
+    ), key=lambda s: (s == "No Sprint", s))
 
     if sprint_filter:
         items = [i for i in raw_items if i["fields"].get("System.IterationPath", "").endswith(sprint_filter)]
@@ -223,7 +231,7 @@ def _transform(raw_items, sprint_filter):
             "status_group": status_group,
             "type": f.get("System.WorkItemType", ""),
             "assignee": assignee,
-            "sprint": f.get("System.IterationPath", "").split("\\")[-1],
+            "sprint": _sprint_label(f.get("System.IterationPath", "")),
             "epic_id": epic_key,
             "epic_title": epic_title,
             "area": f.get("System.AreaPath", ""),
