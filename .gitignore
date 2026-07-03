@@ -5,3 +5,4 @@ local.settings.json
 api/local.settings.json
 venv/
 .venv/
+.playwright-mcp/
